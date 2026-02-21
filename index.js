@@ -106,7 +106,7 @@ client.on("interactionCreate", async interaction => {
         ephemeral: true
       });
 
-      const categoryId = "1470077873455890597";
+      const categoryId = "1472260931462500436";
 
       const category = interaction.guild.channels.cache.get(categoryId);
 
