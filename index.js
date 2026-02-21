@@ -10,29 +10,54 @@ const {
   ButtonStyle,
   StringSelectMenuBuilder,
   REST,
-  Routes
+  Routes,
+  SlashCommandBuilder
 } = require("discord.js");
+
+//////////////////////////////////////
+// CLIENT
+//////////////////////////////////////
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.GuildMessages
   ]
 });
 
-const PREFIX = "!";
-
 //////////////////////////////////////
-// SLASH KOMUT REGISTER
+// SLASH KOMUTLAR
 //////////////////////////////////////
 
 const commands = [
-  {
-    name: "ticket",
-    description: "Ticket paneli gönderir"
-  }
-];
+
+  new SlashCommandBuilder()
+    .setName("ticketpanel")
+    .setDescription("Ticket paneli gönderir"),
+
+  new SlashCommandBuilder()
+    .setName("kick")
+    .setDescription("Kullanıcı atar")
+    .addUserOption(o =>
+      o.setName("kullanici")
+        .setDescription("Atılacak kişi")
+        .setRequired(true)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("ban")
+    .setDescription("Kullanıcı banlar")
+    .addUserOption(o =>
+      o.setName("kullanici")
+        .setDescription("Banlanacak kişi")
+        .setRequired(true)
+    )
+
+].map(c => c.toJSON());
+
+//////////////////////////////////////
+// KOMUT REGISTER
+//////////////////////////////////////
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
@@ -45,28 +70,29 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
       ),
       { body: commands }
     );
-    console.log("Slash commands registered");
+
+    console.log("Slash komutlar yüklendi");
   } catch (err) {
     console.error(err);
   }
 })();
 
 //////////////////////////////////////
-// BOT READY
+// READY
 //////////////////////////////////////
 
 client.once("ready", () => {
-  console.log(`${client.user.tag} aktif!`);
+  console.log(`${client.user.tag} aktif`);
 });
 
 //////////////////////////////////////
-// TICKET PANEL FONKSİYON
+// TICKET PANEL
 //////////////////////////////////////
 
-async function sendTicketPanel(channel) {
+function ticketPanel(channel) {
   const menu = new StringSelectMenuBuilder()
     .setCustomId("ticket_menu")
-    .setPlaceholder("Ticket kategorisi seç")
+    .setPlaceholder("Kategori seç")
     .addOptions([
       { label: "Başvuru", value: "basvuru", emoji: "📋" },
       { label: "Yardım", value: "yardim", emoji: "❓" },
@@ -76,72 +102,70 @@ async function sendTicketPanel(channel) {
   const row = new ActionRowBuilder().addComponents(menu);
 
   channel.send({
-    content: "🎫 **Ticket Paneli**\nBir kategori seç:",
+    content: "🎫 **Ticket Paneli**",
     components: [row]
   });
 }
 
 //////////////////////////////////////
-// PREFIX KOMUTLAR
-//////////////////////////////////////
-
-client.on("messageCreate", async message => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith(PREFIX)) return;
-
-  const args = message.content.slice(PREFIX.length).split(" ");
-  const cmd = args.shift().toLowerCase();
-
-  // Ticket panel
-  if (cmd === "ticketpanel") {
-    sendTicketPanel(message.channel);
-  }
-
-  // Kick
-  if (cmd === "kick") {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers))
-      return;
-
-    const user = message.mentions.members.first();
-    if (!user) return message.reply("Kullanıcı etiketle.");
-
-    await user.kick();
-    message.channel.send("Kullanıcı atıldı.");
-  }
-
-  // Ban
-  if (cmd === "ban") {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-      return;
-
-    const user = message.mentions.members.first();
-    if (!user) return message.reply("Kullanıcı etiketle.");
-
-    await user.ban();
-    message.channel.send("Kullanıcı banlandı.");
-  }
-});
-
-//////////////////////////////////////
-// SLASH KOMUT
+// INTERACTIONS
 //////////////////////////////////////
 
 client.on("interactionCreate", async interaction => {
+
+  //////////////////////////////////////
+  // SLASH KOMUTLAR
+  //////////////////////////////////////
+
   if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "ticket") {
-      await interaction.reply({ content: "Panel gönderildi.", ephemeral: true });
-      sendTicketPanel(interaction.channel);
+
+    // Ticket panel
+    if (interaction.commandName === "ticketpanel") {
+      ticketPanel(interaction.channel);
+      return interaction.reply({
+        content: "Panel gönderildi",
+        ephemeral: true
+      });
+    }
+
+    // Kick
+    if (interaction.commandName === "kick") {
+      if (!interaction.member.permissions.has(
+        PermissionsBitField.Flags.KickMembers
+      )) return interaction.reply({
+        content: "Yetkin yok",
+        ephemeral: true
+      });
+
+      const user = interaction.options.getMember("kullanici");
+      await user.kick();
+
+      return interaction.reply("Kullanıcı atıldı");
+    }
+
+    // Ban
+    if (interaction.commandName === "ban") {
+      if (!interaction.member.permissions.has(
+        PermissionsBitField.Flags.BanMembers
+      )) return interaction.reply({
+        content: "Yetkin yok",
+        ephemeral: true
+      });
+
+      const user = interaction.options.getMember("kullanici");
+      await user.ban();
+
+      return interaction.reply("Kullanıcı banlandı");
     }
   }
 
   //////////////////////////////////////
-  // TICKET MENU
+  // TICKET AÇ
   //////////////////////////////////////
 
   if (interaction.isStringSelectMenu()) {
-    if (interaction.customId !== "ticket_menu") return;
 
-    const categoryId = "1470077873455890597"; // ticket kategori ID
+    const categoryId = "1470077873455890597";
 
     const existing = interaction.guild.channels.cache.find(
       c => c.name === `ticket-${interaction.user.username}`
@@ -149,7 +173,7 @@ client.on("interactionCreate", async interaction => {
 
     if (existing)
       return interaction.reply({
-        content: "Zaten açık ticketin var!",
+        content: "Zaten açık ticketin var",
         ephemeral: true
       });
 
@@ -177,7 +201,7 @@ client.on("interactionCreate", async interaction => {
     const row = new ActionRowBuilder().addComponents(closeBtn);
 
     channel.send({
-      content: `🎫 ${interaction.user} ticket açtı\nKategori: **${interaction.values[0]}**`,
+      content: `🎫 ${interaction.user}`,
       components: [row]
     });
 
@@ -193,12 +217,13 @@ client.on("interactionCreate", async interaction => {
 
   if (interaction.isButton()) {
     if (interaction.customId === "ticket_close") {
-      await interaction.reply({ content: "Ticket kapanıyor..." });
+      await interaction.reply("Ticket kapanıyor...");
       setTimeout(() => {
         interaction.channel.delete().catch(() => {});
       }, 2000);
     }
   }
+
 });
 
 //////////////////////////////////////
