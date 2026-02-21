@@ -1,4 +1,13 @@
-
-TOKEN=BOT_TOKEN
-TICKET_CATEGORY_ID=KATEGORI_ID
-STAFF_ROLES=ROL1,ROL2
+{
+  "name": "pro-discord-bot",
+  "version": "1.0.0",
+  "description": "Advanced Discord Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5"
+  }
+}
