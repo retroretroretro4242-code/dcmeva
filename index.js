@@ -15,22 +15,18 @@ const {
   SlashCommandBuilder
 } = require("discord.js");
 
-//////////////////////////////////////
-// CLIENT
-//////////////////////////////////////
-
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
 //////////////////////////////////////
-// SLASH KOMUTLAR
+// SLASH REGISTER
 //////////////////////////////////////
 
 const commands = [
   new SlashCommandBuilder()
     .setName("ticketpanel")
-    .setDescription("Gelişmiş ticket paneli gönderir")
+    .setDescription("Ticket paneli gönderir")
 ].map(c => c.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
@@ -46,12 +42,10 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
     );
     console.log("Slash komutlar yüklendi");
   } catch (err) {
-    console.error(err);
+    console.error("Slash error:", err);
   }
 })();
 
-//////////////////////////////////////
-// READY
 //////////////////////////////////////
 
 client.once("ready", () => {
@@ -59,24 +53,18 @@ client.once("ready", () => {
 });
 
 //////////////////////////////////////
-// TICKET PANEL FONKSİYONU
+// PANEL
 //////////////////////////////////////
 
 function ticketPanel(channel) {
   const embed = new EmbedBuilder()
-    .setTitle("🎫 Minecraft Destek Sistemi")
-    .setDescription(
-      "Aşağıdan kategori seçerek destek alabilirsin:\n\n" +
-      "📋 **Başvuru** → Yetkili başvurusu\n" +
-      "❓ **Yardım** → Teknik destek\n" +
-      "⚠️ **Şikayet** → Oyuncu bildirimi\n\n" +
-      "⚡ Aynı anda sadece 1 ticket açabilirsin."
-    )
+    .setTitle("🎫 Destek Paneli")
+    .setDescription("Kategori seç ve ticket aç")
     .setColor("#5865F2");
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId("ticket_menu")
-    .setPlaceholder("📂 Bir kategori seç")
+    .setPlaceholder("Kategori seç")
     .addOptions([
       { label: "Başvuru", value: "basvuru", emoji: "📋" },
       { label: "Yardım", value: "yardim", emoji: "❓" },
@@ -97,95 +85,81 @@ function ticketPanel(channel) {
 
 client.on("interactionCreate", async interaction => {
 
-  //////////////////////////////////////
-  // SLASH KOMUT
-  //////////////////////////////////////
+  try {
 
-  if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "ticketpanel") {
-      ticketPanel(interaction.channel);
-      return interaction.reply({
-        content: "Ticket paneli gönderildi ✅",
+    // Slash
+    if (interaction.isChatInputCommand()) {
+      if (interaction.commandName === "ticketpanel") {
+        ticketPanel(interaction.channel);
+        return interaction.reply({
+          content: "Panel gönderildi ✅",
+          ephemeral: true
+        });
+      }
+    }
+
+    // Ticket aç
+    if (interaction.isStringSelectMenu()) {
+
+      await interaction.reply({
+        content: "Ticket açılıyor...",
         ephemeral: true
       });
-    }
-  }
 
-  //////////////////////////////////////
-  // TICKET AÇ
-  //////////////////////////////////////
+      const categoryId = "1470077873455890597";
 
-  if (interaction.isStringSelectMenu()) {
+      const category = interaction.guild.channels.cache.get(categoryId);
 
-    await interaction.deferReply({ ephemeral: true });
+      if (!category) {
+        return interaction.editReply({
+          content: "❌ Ticket kategorisi bulunamadı!"
+        });
+      }
 
-    const categoryId = "1470077873455890597";
+      const channel = await interaction.guild.channels.create({
+        name: `ticket-${interaction.user.id}`,
+        type: ChannelType.GuildText,
+        parent: categoryId
+      });
 
-    const existing = interaction.guild.channels.cache.find(
-      c => c.name === `ticket-${interaction.user.id}`
-    );
+      const embed = new EmbedBuilder()
+        .setTitle("🎟️ Ticket Açıldı")
+        .setDescription(`Merhaba ${interaction.user}`)
+        .setColor("#57F287");
 
-    if (existing) {
-      return interaction.editReply({
-        content: "❌ Zaten açık ticketin var!"
+      const closeBtn = new ButtonBuilder()
+        .setCustomId("ticket_close")
+        .setLabel("Ticket Kapat")
+        .setStyle(ButtonStyle.Danger);
+
+      const row = new ActionRowBuilder().addComponents(closeBtn);
+
+      await channel.send({
+        embeds: [embed],
+        components: [row]
+      });
+
+      await interaction.editReply({
+        content: `✅ Ticket: ${channel}`
       });
     }
 
-    const channel = await interaction.guild.channels.create({
-      name: `ticket-${interaction.user.id}`,
-      type: ChannelType.GuildText,
-      parent: categoryId,
-      permissionOverwrites: [
-        {
-          id: interaction.guild.id,
-          deny: [PermissionsBitField.Flags.ViewChannel]
-        },
-        {
-          id: interaction.user.id,
-          allow: [PermissionsBitField.Flags.ViewChannel]
-        }
-      ]
-    });
+    // Kapat
+    if (interaction.isButton()) {
+      if (interaction.customId === "ticket_close") {
+        await interaction.reply("Kapanıyor...");
+        setTimeout(() => interaction.channel.delete(), 2000);
+      }
+    }
 
-    const embed = new EmbedBuilder()
-      .setTitle("🎟️ Ticket Oluşturuldu")
-      .setDescription(
-        `Merhaba ${interaction.user}\n\n` +
-        "Sorununu detaylı yaz.\n" +
-        "Yetkililer yakında ilgilenecek."
-      )
-      .setColor("#57F287");
+  } catch (err) {
+    console.error("Interaction error:", err);
 
-    const closeBtn = new ButtonBuilder()
-      .setCustomId("ticket_close")
-      .setLabel("🔒 Ticket Kapat")
-      .setStyle(ButtonStyle.Danger);
-
-    const row = new ActionRowBuilder().addComponents(closeBtn);
-
-    await channel.send({
-      embeds: [embed],
-      components: [row]
-    });
-
-    await interaction.editReply({
-      content: `✅ Ticket açıldı: ${channel}`
-    });
-  }
-
-  //////////////////////////////////////
-  // TICKET KAPAT
-  //////////////////////////////////////
-
-  if (interaction.isButton()) {
-    if (interaction.customId === "ticket_close") {
-      await interaction.reply({
-        content: "⏳ Ticket kapanıyor...",
-      });
-
-      setTimeout(() => {
-        interaction.channel.delete().catch(() => {});
-      }, 2000);
+    if (!interaction.replied) {
+      interaction.reply({
+        content: "❌ Hata oluştu!",
+        ephemeral: true
+      }).catch(() => {});
     }
   }
 
