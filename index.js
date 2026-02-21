@@ -89,15 +89,54 @@ client.once("ready", () => {
 // TICKET PANEL
 //////////////////////////////////////
 
+const { EmbedBuilder } = require("discord.js");
+
 function ticketPanel(channel) {
+
+  const embed = new EmbedBuilder()
+    .setTitle("🎫 Destek Sistemi")
+    .setDescription(
+      "Minecraft sunucumuz için destek almak istiyorsan aşağıdan kategori seç.\n\n" +
+      "**📋 Başvuru** → Yetkili başvuruları\n" +
+      "**❓ Yardım** → Oyun içi veya Discord destek\n" +
+      "**⚠️ Şikayet** → Oyuncu şikayetleri\n\n" +
+      "⚡ Lütfen gereksiz ticket açmayın.\n" +
+      "⚡ Aynı anda 1 ticket açabilirsiniz."
+    )
+    .setColor("#2b2d31")
+    .setFooter({ text: "MevareCraft Destek Sistemi" });
+
   const menu = new StringSelectMenuBuilder()
     .setCustomId("ticket_menu")
-    .setPlaceholder("Kategori seç")
+    .setPlaceholder("📂 Bir kategori seç")
     .addOptions([
-      { label: "Başvuru", value: "basvuru", emoji: "📋" },
-      { label: "Yardım", value: "yardim", emoji: "❓" },
-      { label: "Şikayet", value: "sikayet", emoji: "⚠️" }
+      {
+        label: "Başvuru",
+        description: "Yetkili olmak için başvuru yap",
+        value: "basvuru",
+        emoji: "📋"
+      },
+      {
+        label: "Yardım",
+        description: "Destek almak için",
+        value: "yardim",
+        emoji: "❓"
+      },
+      {
+        label: "Şikayet",
+        description: "Bir oyuncuyu şikayet et",
+        value: "sikayet",
+        emoji: "⚠️"
+      }
     ]);
+
+  const row = new ActionRowBuilder().addComponents(menu);
+
+  channel.send({
+    embeds: [embed],
+    components: [row]
+  });
+}
 
   const row = new ActionRowBuilder().addComponents(menu);
 
