@@ -119,7 +119,29 @@ client.on("interactionCreate", async interaction => {
       const channel = await interaction.guild.channels.create({
         name: `ticket-${interaction.user.id}`,
         type: ChannelType.GuildText,
-        parent: categoryId
+        parent: categoryId,
+        permissionOverwrites: [
+          {
+            id: interaction.guild.id, // @everyone
+            deny: [PermissionsBitField.Flags.ViewChannel],
+          },
+          {
+            id: interaction.user.id, // ticket açan kişi
+            allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages,
+              PermissionsBitField.Flags.ReadMessageHistory
+            ],
+          },
+          {
+            id: "1474568875634065428", // yetkili rol
+            allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages,
+              PermissionsBitField.Flags.ReadMessageHistory
+            ],
+          },
+        ],
       });
 
       const embed = new EmbedBuilder()
