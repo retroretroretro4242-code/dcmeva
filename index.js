@@ -59,16 +59,16 @@ client.once("ready", () => {
 function ticketPanel(channel) {
   const embed = new EmbedBuilder()
     .setTitle("🎫 Destek Paneli")
-    .setDescription("Kategori seç ve ticket aç")
+    .setDescription("Kategori seç ve ticket aç. Her ticket özel izinlerle açılır; yalnızca siz ve yetkililer görebilir.")
     .setColor("#5865F2");
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId("ticket_menu")
     .setPlaceholder("Kategori seç")
     .addOptions([
-      { label: "Başvuru", value: "basvuru", emoji: "📋" },
-      { label: "Yardım", value: "yardim", emoji: "❓" },
-      { label: "Şikayet", value: "sikayet", emoji: "⚠️" }
+      { label: "Başvuru", value: "basvuru", emoji: "📋", description: "Başvuru yapmak için aç" },
+      { label: "Yardım", value: "yardim", emoji: "❓", description: "Sorularını sormak için aç" },
+      { label: "Şikayet", value: "sikayet", emoji: "⚠️", description: "Şikayetini iletmek için aç" }
     ]);
 
   const row = new ActionRowBuilder().addComponents(menu);
@@ -101,12 +101,9 @@ client.on("interactionCreate", async interaction => {
     // Ticket aç
     if (interaction.isStringSelectMenu()) {
 
-      await interaction.reply({
-        content: "Ticket açılıyor...",
-        ephemeral: true
-      });
+      await interaction.deferReply({ ephemeral: true }); // artık takılmıyor
 
-      const categoryId = "1472161215034822762"; // Ticketların açılacağı kategori
+      const categoryId = "1472161215034822762";
 
       const category = interaction.guild.channels.cache.get(categoryId);
 
@@ -122,11 +119,11 @@ client.on("interactionCreate", async interaction => {
         parent: categoryId,
         permissionOverwrites: [
           {
-            id: interaction.guild.id, // @everyone
+            id: interaction.guild.id,
             deny: [PermissionsBitField.Flags.ViewChannel],
           },
           {
-            id: interaction.user.id, // ticket açan kişi
+            id: interaction.user.id,
             allow: [
               PermissionsBitField.Flags.ViewChannel,
               PermissionsBitField.Flags.SendMessages,
@@ -134,7 +131,7 @@ client.on("interactionCreate", async interaction => {
             ],
           },
           {
-            id: "1474568875634065428", // yetkili rol
+            id: "1474568875634065428",
             allow: [
               PermissionsBitField.Flags.ViewChannel,
               PermissionsBitField.Flags.SendMessages,
@@ -146,7 +143,7 @@ client.on("interactionCreate", async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle("🎟️ Ticket Açıldı")
-        .setDescription(`Merhaba ${interaction.user}`)
+        .setDescription(`Merhaba ${interaction.user}\nTicket sadece siz ve yetkililer tarafından görülebilir.`)
         .setColor("#57F287");
 
       const closeBtn = new ButtonBuilder()
@@ -162,7 +159,7 @@ client.on("interactionCreate", async interaction => {
       });
 
       await interaction.editReply({
-        content: `✅ Ticket: ${channel}`
+        content: `✅ Ticket başarıyla açıldı: ${channel}`
       });
     }
 
