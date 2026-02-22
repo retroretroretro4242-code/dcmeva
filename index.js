@@ -106,7 +106,7 @@ client.on("interactionCreate", async interaction => {
         ephemeral: true
       });
 
-      const categoryId = "1472260931462500436";
+      const categoryId = "1472161215034822762"; // Ticketların açılacağı kategori
 
       const category = interaction.guild.channels.cache.get(categoryId);
 
